@@ -16,6 +16,7 @@ ENV HOME=/home/user \
 
 # Copy only code files, NOT .env or .git
 COPY --chown=user qaoa_backend.py /code/
+COPY --chown=user quota_manager.py /code/
 COPY --chown=user requirements.txt /code/
 
 # Start Gunicorn on port 7860
