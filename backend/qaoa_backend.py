@@ -211,9 +211,11 @@ def run_dwave_solver(dist_matrix):
 
     return route, "D-Wave Quantum Annealer (ATSP)"
 
-def run_ibm_cloud_solver(dist_matrix):
+def run_ibm_cloud_solver(dist_matrix, custom_token=None):
     """Real QAOA on IBM Quantum hardware using V2 Primitives + Session."""
-    if not (QISKIT_AVAILABLE and IBM_TOKEN):
+    active_token = custom_token if custom_token else IBM_TOKEN
+    
+    if not (QISKIT_AVAILABLE and active_token):
         raise Exception("IBM Token missing or Qiskit not installed.")
     print("☁️ Executing QAOA on IBM Quantum Cloud...")
 
@@ -230,9 +232,9 @@ def run_ibm_cloud_solver(dist_matrix):
     ansatz = QAOAAnsatz(hamiltonian, reps=reps)
 
     try:
-        service = QiskitRuntimeService(channel="ibm_quantum", token=IBM_TOKEN)
+        service = QiskitRuntimeService(channel="ibm_quantum", token=active_token)
     except Exception:
-        service = QiskitRuntimeService(channel="ibm_cloud", token=IBM_TOKEN)
+        service = QiskitRuntimeService(channel="ibm_cloud", token=active_token)
     backend = service.least_busy(operational=True, simulator=False, min_num_qubits=num_qubits)
 
     # 1. Local Optimization to bypass cloud queues
@@ -355,7 +357,7 @@ def run_local_simulator(dist_matrix):
     return list(route), f"QAOA {sim_name} (reps={reps})"
 
 # --- MAIN WORKER LOGIC ---
-def background_worker(job_id, locations, solver_mode, quota_exceeded_flag=False):
+def background_worker(job_id, locations, solver_mode, quota_exceeded_flag=False, custom_ibm_token=None):
     try:
         num_nodes = len(locations)
         dist_matrix = calculate_distance_matrix(locations)
@@ -370,7 +372,7 @@ def background_worker(job_id, locations, solver_mode, quota_exceeded_flag=False)
                     route, method = run_dwave_solver(dist_matrix)
                 except Exception as dwave_err:
                     print(f"D-Wave skipped: {dwave_err}")
-                    route, method = run_ibm_cloud_solver(dist_matrix)
+                    route, method = run_ibm_cloud_solver(dist_matrix, custom_token=custom_ibm_token)
             elif solver_mode == 'local':
                 route, method = run_local_simulator(dist_matrix)
             else:
@@ -416,6 +418,8 @@ def start_solve():
         return jsonify({'error': 'Invalid JSON body'}), 400
     locations = data.get('locations', [])
     solver_mode = data.get('solver_mode', 'local') 
+    custom_ibm_token = data.get('custom_ibm_token', None)
+    developer_secret = data.get('developer_secret', None)
     
     if len(locations) < 2:
         return jsonify({'error': 'Need at least 2 locations'}), 400
@@ -435,19 +439,26 @@ def start_solve():
 
     quota_exceeded_flag = False
     if solver_mode == 'cloud':
-        ip_addr = request.remote_addr
-        allowed, msg = quota_manager.check_and_consume_quota(ip_addr)
-        if not allowed:
-            print(f"Quota exceeded for {ip_addr}: {msg}. Falling back to local.")
-            solver_mode = 'local'
-            quota_exceeded_flag = True
+        # Check bypass conditions
+        is_dev_bypass = developer_secret and developer_secret == os.getenv('DEVELOPER_SECRET')
+        has_custom_token = bool(custom_ibm_token)
+        
+        if is_dev_bypass or has_custom_token:
+            print("Quota bypassed (Developer bypass or Custom Token provided).")
+        else:
+            ip_addr = request.remote_addr
+            allowed, msg = quota_manager.check_and_consume_quota(ip_addr)
+            if not allowed:
+                print(f"Quota exceeded for {ip_addr}: {msg}. Falling back to local.")
+                solver_mode = 'local'
+                quota_exceeded_flag = True
 
     job_id = str(uuid.uuid4())
     with jobs_lock:
         cleanup_old_jobs()
         jobs_db[job_id] = {"status": "pending", "created_at": time.time()}
     
-    thread = threading.Thread(target=background_worker, args=(job_id, locations, solver_mode, quota_exceeded_flag))
+    thread = threading.Thread(target=background_worker, args=(job_id, locations, solver_mode, quota_exceeded_flag, custom_ibm_token))
     thread.start()
     
     return jsonify({"job_id": job_id, "status": "pending"})

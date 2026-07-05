@@ -1,6 +1,6 @@
 import { Icons } from '../icons';
 
-export const Header = ({ theme, setTheme, showSidebar, setShowSidebar, t }) => {
+export const Header = ({ theme, setTheme, showSidebar, setShowSidebar, onOpenSettings, t }) => {
 
   return (
     <div className={`fixed top-0 left-0 right-0 h-14 z-50 flex items-center justify-between px-6 ${t.header}`}>
@@ -9,7 +9,10 @@ export const Header = ({ theme, setTheme, showSidebar, setShowSidebar, t }) => {
           <h1 className="font-bold text-lg tracking-tight">QAOA Route Optimizer</h1>
       </div>
       <div className="flex items-center gap-4">
-          <button onClick={()=>setTheme(x=>x==='light'?'dark':'light')} className="p-2 rounded-full hover:bg-white/10 transition">
+          <button onClick={onOpenSettings} className="p-2 rounded-full hover:bg-white/10 transition" title="Settings">
+              <Icons.Settings className="w-5 h-5"/>
+          </button>
+          <button onClick={()=>setTheme(x=>x==='light'?'dark':'light')} className="p-2 rounded-full hover:bg-white/10 transition" title="Toggle Theme">
               {theme==='light'?<Icons.Moon className="w-5 h-5"/>:<Icons.Sun className="w-5 h-5"/>}
           </button>
           <button onClick={()=>setShowSidebar(!showSidebar)} className="md:hidden p-2 hover:bg-white/10 rounded"><Icons.Menu className="w-6 h-6"/></button>

@@ -80,7 +80,12 @@ export const useSolver = () => {
             const startRes = await fetch(`${BACKEND_URL}/solve`, {
                 method: 'POST', 
                 headers: {'Content-Type':'application/json'},
-                body: JSON.stringify({ locations, solver_mode: backendMode }), 
+                body: JSON.stringify({ 
+                    locations, 
+                    solver_mode: backendMode,
+                    custom_ibm_token: localStorage.getItem('ibm_token') || null,
+                    developer_secret: localStorage.getItem('dev_secret') || null
+                }),
                 mode: 'cors',
                 signal
             });

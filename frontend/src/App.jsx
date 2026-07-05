@@ -5,10 +5,12 @@ import { MapView } from './components/MapView';
 import { useSolver } from './hooks/useSolver';
 import { getTheme } from './constants/themes';
 import { TelemetryPanel } from './components/TelemetryPanel';
+import { SettingsModal } from './components/SettingsModal';
 
 export default function App() {
   const [theme, setTheme] = useState('light');
   const [showSidebar, setShowSidebar] = useState(true);
+  const [showSettings, setShowSettings] = useState(false);
   const solver = useSolver();
   const t = getTheme(theme);
 
@@ -17,7 +19,15 @@ export default function App() {
       <Header 
         theme={theme} setTheme={setTheme} 
         showSidebar={showSidebar} setShowSidebar={setShowSidebar} 
+        onOpenSettings={() => setShowSettings(true)}
         t={t}
+      />
+      
+      <SettingsModal 
+        isOpen={showSettings} 
+        onClose={() => setShowSettings(false)} 
+        theme={theme} 
+        t={t} 
       />
       
       <Sidebar 
