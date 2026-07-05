@@ -1,0 +1,5 @@
+.env
+Qvenv/
+__pycache__/
+*.pyc
+.dockerignore
