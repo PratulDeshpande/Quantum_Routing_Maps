@@ -1,0 +1,19 @@
+# Environment secrets (ALL subdirectories)
+**/.env
+**/.env.local
+**/.env.development
+**/.env.production
+
+# Database files
+**/*.db
+**/*.sqlite3
+
+# Python artifacts
+**/__pycache__/
+**/*.pyc
+**/Qvenv/
+
+# Node artifacts
+**/node_modules/
+**/dist/
+**/dist-ssr/
