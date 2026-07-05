@@ -72,7 +72,7 @@ def calculate_distance_matrix(locations):
     # Try OSRM API First
     try:
         coords = ";".join([f"{loc['lng']},{loc['lat']}" for loc in locations])
-        url = f"http://router.project-osrm.org/table/v1/driving/{coords}?annotations=distance"
+        url = f"https://router.project-osrm.org/table/v1/driving/{coords}?annotations=distance"
         res = requests.get(url, timeout=5)
         if res.status_code == 200:
             data = res.json()
