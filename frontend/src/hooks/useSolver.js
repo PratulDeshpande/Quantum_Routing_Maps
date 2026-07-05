@@ -41,7 +41,7 @@ export const useSolver = () => {
     try {
         const coordsStr = route.map(i => `${locs[i].lng},${locs[i].lat}`).join(';');
         const fullStr = `${coordsStr};${locs[route[0]].lng},${locs[route[0]].lat}`;
-        const res = await fetch(`http://router.project-osrm.org/route/v1/driving/${fullStr}?overview=full`);
+        const res = await fetch(`https://router.project-osrm.org/route/v1/driving/${fullStr}?overview=full`);
         const data = await res.json();
         if(data.routes && data.routes.length > 0) {
             return polyline.decode(data.routes[0].geometry);
