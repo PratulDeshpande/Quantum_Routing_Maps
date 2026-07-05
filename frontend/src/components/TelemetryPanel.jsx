@@ -63,19 +63,13 @@ export const TelemetryPanel = ({ locations, optimizedPath, metrics, executionSta
                     {optimizedPath.length > 0 && (
                         <>
                             <div className="flex justify-between items-center border-b border-slate-700 pb-2">
-                                <span className="text-slate-400">Naive Distance</span>
+                                <span className="text-slate-400">Straight-Line Distance</span>
                                 <span className="font-mono">{naiveDistance.toFixed(2)} km</span>
                             </div>
                             <div className="flex justify-between items-center pb-1">
-                                <span className="text-slate-400">Optimized Distance</span>
-                                <span className="font-mono text-emerald-400 font-bold">{optDistance.toFixed(2)} km</span>
+                                <span className="text-slate-400">Road Distance (Optimized)</span>
+                                <span className="font-mono text-emerald-400 font-bold">{metrics.energy.toFixed(2)} km</span>
                             </div>
-                            
-                            {optDistance < naiveDistance && (
-                                <div className="text-xs text-center mt-1 text-emerald-500 bg-emerald-900/30 py-1 rounded">
-                                    Saved {(naiveDistance - optDistance).toFixed(2)} km!
-                                </div>
-                            )}
                         </>
                     )}
                 </div>

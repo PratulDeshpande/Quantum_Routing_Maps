@@ -129,4 +129,4 @@ def check_and_consume_quota(ip_address, max_global=50, max_ip_daily=2):
         return True, "Quota consumed."
     except Exception as e:
         print(f"Quota DB Error: {e}")
-        return True, "DB Error"
+        return False, "Service temporarily unavailable (DB Error)"

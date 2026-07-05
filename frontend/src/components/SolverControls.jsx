@@ -22,14 +22,7 @@ export const SolverControls = ({
                 <option value="browser">🌐 Browser Simulation (Offline)</option>
             </select>
         </div>
-        <div>
-            <label className="text-[10px] uppercase font-bold tracking-wider opacity-70 mb-1 block">Vehicle</label>
-            <select value={vehicleType} onChange={(e)=>setVehicleType(e.target.value)} className={`w-full p-2.5 rounded text-sm outline-none border ${t.input}`}>
-                <option value="truck">🚛 Heavy Truck</option>
-                <option value="van">🚐 Delivery Van</option>
-                <option value="drone">🚁 Autonomous Drone</option>
-            </select>
-        </div>
+
 
         <div className="grid grid-cols-2 gap-2">
             <button onClick={handleReset} className={`py-2.5 rounded font-bold text-sm transition ${t.btnSec}`}>Reset</button>

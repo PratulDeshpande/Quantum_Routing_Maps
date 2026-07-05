@@ -7,12 +7,13 @@ from flask import Flask, request, jsonify
 from flask_cors import CORS
 import networkx as nx
 from dotenv import load_dotenv
+# --- CONFIGURATION ---
+from dotenv import load_dotenv
+load_dotenv()
 
 import quota_manager
 quota_manager.init_db()
 
-# --- CONFIGURATION ---
-load_dotenv()
 IBM_TOKEN = os.getenv("IBM_TOKEN")
 DWAVE_TOKEN = os.getenv("DWAVE_TOKEN")
 
@@ -31,7 +32,6 @@ CORS(app, resources={r"/*": {"origins": ALLOWED_ORIGINS}})
 QISKIT_AVAILABLE = False
 try:
     from qiskit.circuit.library import QAOAAnsatz
-    from qiskit_optimization.applications import Tsp
     from qiskit_optimization.converters import QuadraticProgramToQubo
     from qiskit_ibm_runtime import QiskitRuntimeService
     QISKIT_AVAILABLE = True
@@ -160,10 +160,56 @@ def run_dwave_solver(dist_matrix):
     if not (DWAVE_AVAILABLE and DWAVE_TOKEN):
         raise Exception("D-Wave Token missing or library not installed.")
     print("🌊 Executing on D-Wave Leap...")
+
+    import dimod
+
+    n = len(dist_matrix)
+    Q = {}
+    penalty = float(np.max(dist_matrix)) * n * 2
+
+    def idx(city, pos):
+        return city * n + pos
+
+    # Objective: minimize travel cost
+    for i in range(n):
+        for j in range(n):
+            if i != j:
+                for p in range(n):
+                    qi = idx(i, p)
+                    qj = idx(j, (p + 1) % n)
+                    Q[(qi, qj)] = Q.get((qi, qj), 0) + dist_matrix[i][j]
+
+    # Constraint 1: Each city visited exactly once
+    for i in range(n):
+        for p in range(n):
+            qi = idx(i, p)
+            Q[(qi, qi)] = Q.get((qi, qi), 0) - penalty
+            for p2 in range(p + 1, n):
+                qi2 = idx(i, p2)
+                Q[(qi, qi2)] = Q.get((qi, qi2), 0) + 2 * penalty
+
+    # Constraint 2: Each position has exactly one city
+    for p in range(n):
+        for i in range(n):
+            qi = idx(i, p)
+            Q[(qi, qi)] = Q.get((qi, qi), 0) - penalty
+            for i2 in range(i + 1, n):
+                qi2 = idx(i2, p)
+                Q[(qi, qi2)] = Q.get((qi, qi2), 0) + 2 * penalty
+
+    bqm = dimod.BinaryQuadraticModel.from_qubo(Q)
     sampler = LeapHybridSampler(token=DWAVE_TOKEN)
-    G = nx.from_numpy_array(dist_matrix)
-    route = dnx.traveling_salesperson(G, sampler)
-    return route, "D-Wave Quantum Annealer"
+    result = sampler.sample(bqm, label="QuantumMaps ATSP")
+    best = result.first.sample
+
+    route = []
+    for p in range(n):
+        for i in range(n):
+            if best.get(idx(i, p), 0) == 1:
+                route.append(i)
+                break
+
+    return route, "D-Wave Quantum Annealer (ATSP)"
 
 def run_ibm_cloud_solver(dist_matrix):
     """Real QAOA on IBM Quantum hardware using V2 Primitives + Session."""
@@ -173,7 +219,6 @@ def run_ibm_cloud_solver(dist_matrix):
 
     from scipy.optimize import minimize
     from qiskit.transpiler.preset_passmanagers import generate_preset_pass_manager
-    from qiskit_ibm_runtime import Session
 
     tsp = AsymmetricTsp(dist_matrix)
     qp = tsp.to_quadratic_program()
@@ -219,7 +264,12 @@ def run_ibm_cloud_solver(dist_matrix):
     
     sampler = SamplerV2(mode=backend)
     sample_job = sampler.run([(meas_circuit, opt_result.x)])
-    sample_result = sample_job.result()[0]
+    
+    try:
+        sample_result = sample_job.result(timeout=300)[0]
+    except Exception as timeout_err:
+        print(f"IBM job timed out: {timeout_err}")
+        raise Exception("IBM Quantum job timed out after 5 minutes. Try again later.")
 
     counts = sample_result.data.meas.get_counts()
     best_bitstring = max(counts, key=counts.get)

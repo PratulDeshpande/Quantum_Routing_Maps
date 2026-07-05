@@ -20,4 +20,4 @@ COPY --chown=user quota_manager.py /code/
 COPY --chown=user requirements.txt /code/
 
 # Start Gunicorn on port 7860
-CMD ["gunicorn", "-b", "0.0.0.0:7860", "qaoa_backend:app", "--timeout", "120", "--workers", "1"]
+CMD ["gunicorn", "-b", "0.0.0.0:7860", "qaoa_backend:app", "--timeout", "120", "--workers", "1", "--threads", "4"]

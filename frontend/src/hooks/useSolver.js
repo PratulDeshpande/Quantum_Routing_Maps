@@ -29,7 +29,9 @@ export const useSolver = () => {
     setOptimizedPath([]);
     setRouteGeometry([]);
     try {
-        const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`);
+        const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`, {
+            headers: { 'User-Agent': 'QuantumMaps/1.0 (https://github.com/PratulDeshpande/Quantum_Routing_Maps)' }
+        });
         const data = await res.json();
         const addr = data.display_name ? data.display_name.split(',')[0] : 'Unknown';
         setLocations(p => p.map(l => l.id === newId ? { ...l, address: addr } : l));
@@ -86,15 +88,8 @@ export const useSolver = () => {
             const { job_id } = await startRes.json();
 
             let pollCount = 0;
-            const poll = async () => {
-                if (signal.aborted) return;
+            while (pollCount < MAX_POLLS && !signal.aborted) {
                 pollCount++;
-                if (pollCount > MAX_POLLS) {
-                    setExecutionStatus("Timed out waiting for result.");
-                    setIsSolving(false);
-                    return;
-                }
-
                 try {
                     const pollRes = await fetch(`${BACKEND_URL}/status/${job_id}`, { signal });
                     const statusData = await pollRes.json();
@@ -112,20 +107,22 @@ export const useSolver = () => {
                         if (r.method && r.method.toLowerCase().includes('fallback')) {
                              setIsFallback(true);
                         }
+                        break;
                     } else if(statusData.status === 'failed') {
                         throw new Error(statusData.error || "Job failed");
                     } else {
                         setExecutionStatus(`Processing... (${pollCount}/${MAX_POLLS})`);
                         await new Promise(r => setTimeout(r, POLL_INTERVAL_MS));
-                        await poll();
                     }
                 } catch(e) {
                     if (e.name === 'AbortError') return;
                     throw e;
                 }
-            };
-            
-            await poll();
+            }
+            if (pollCount >= MAX_POLLS) {
+                setExecutionStatus("Timed out waiting for result.");
+                setIsSolving(false);
+            }
 
         } catch(err) {
             if (err.name === 'AbortError') return;
