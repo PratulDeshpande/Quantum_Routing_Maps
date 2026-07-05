@@ -100,12 +100,25 @@ export const MapView = ({ theme, showSidebar, locations, optimizedPath, routeGeo
         ))}
 
         {optimizedPath.length > 0 && (
-            <Polyline 
-                positions={routeGeometry && routeGeometry.length > 0 ? routeGeometry : getPolylinePositions()} 
-                color={isSolving ? '#93c5fd' : '#009CDE'} 
-                weight={routeGeometry && routeGeometry.length > 0 ? 5 : 4} 
-                dashArray={isSolving ? '5,10' : null} 
-            />
+            <>
+                <Polyline 
+                    positions={routeGeometry && routeGeometry.length > 0 ? routeGeometry : getPolylinePositions()} 
+                    color={theme === 'dark' ? '#1e293b' : '#ffffff'} 
+                    weight={10} 
+                    opacity={0.8}
+                    lineCap="round"
+                    lineJoin="round"
+                />
+                <Polyline 
+                    positions={routeGeometry && routeGeometry.length > 0 ? routeGeometry : getPolylinePositions()} 
+                    color={isSolving ? '#94a3b8' : '#3b82f6'} 
+                    weight={5} 
+                    dashArray={isSolving ? '5,10' : '10,10'} 
+                    className={isSolving ? '' : 'route-path-animated'}
+                    lineCap="round"
+                    lineJoin="round"
+                />
+            </>
         )}
       </MapContainer>
       

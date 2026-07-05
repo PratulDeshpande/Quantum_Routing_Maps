@@ -77,11 +77,32 @@ def calculate_distance_matrix(locations):
         if res.status_code == 200:
             data = res.json()
             if 'distances' in data:
-                # OSRM returns meters, convert to km
-                matrix = np.array(data['distances']) / 1000.0
-                return matrix
+                # OSRM returns None (null) for unroutable edges. 
+                # np.array converts None to NaN if dtype=float.
+                raw_matrix = np.array(data['distances'], dtype=float) / 1000.0
+                
+                # Check for NaN (unroutable points)
+                if np.isnan(raw_matrix).any():
+                    print("⚠️ OSRM returned null for some routes. Imputing missing edges with Haversine distance.")
+                    hav_matrix = np.zeros((n, n))
+                    R = 6371
+                    for i in range(n):
+                        for j in range(n):
+                            if i != j:
+                                lat1, lon1 = locations[i]['lat'], locations[i]['lng']
+                                lat2, lon2 = locations[j]['lat'], locations[j]['lng']
+                                dlat = np.radians(lat2 - lat1)
+                                dlon = np.radians(lon2 - lon1)
+                                a = (np.sin(dlat / 2) ** 2 + np.cos(np.radians(lat1)) * np.cos(np.radians(lat2)) * np.sin(dlon / 2) ** 2)
+                                hav_matrix[i][j] = R * 2 * np.arctan2(np.sqrt(a), np.sqrt(1 - a))
+                    
+                    # Fill NaNs with Haversine distance
+                    mask = np.isnan(raw_matrix)
+                    raw_matrix[mask] = hav_matrix[mask]
+                
+                return raw_matrix
     except Exception as e:
-        print(f"OSRM Fetch failed: {e}. Falling back to Haversine.")
+        print(f"OSRM Fetch failed: {e}. Falling back entirely to Haversine.")
         
     # Fallback to Haversine (Euclidean)
     R = 6371  # Earth radius in km
